@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>컬러드스파 스크롤 애니메이션</title>
+    <title>Scroll Animation</title>
     <style>
-        body, html {
+        * {
             margin: 0;
             padding: 0;
-            height: 100%;
+            box-sizing: border-box;
+        }
+        body {
             background-color: #000;
+            color: #fff;
             overflow-x: hidden;
         }
-        /* 스크롤 길이를 늘려서 애니메이션 감도 조절 */
+        /* 스크롤 높이를 확보하기 위한 컨테이너 */
         .scroll-container {
-            height: 8000vh; 
+            height: 500vh; /* 스크롤 속도를 조절하고 싶다면 이 값을 변경하세요 (예: 400vh, 600vh) */
         }
+        /* 화면 중앙에 캔버스를 고정 */
         .canvas-container {
             position: fixed;
             top: 0;
@@ -25,7 +29,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #000;
+            z-index: 1;
         }
         canvas {
             max-width: 100%;
@@ -42,60 +46,60 @@
     </div>
 
     <script>
+        const html = document.documentElement;
         const canvas = document.getElementById("hero-lightpass");
         const context = canvas.getContext("2d");
 
-        // 총 프레임 수 (0부터 1517까지 총 1518장 혹은 지정하신 1517장 기준)
+        // 프레임 설정 (000000 ~ 001517, 총 1518장)
         const frameCount = 1518;
-        
-        // 🚨 [적용 완료] 파이널컷 실제 추출 형식: frame-000000.jpg (6자리 zero-padding)
-        // 만약 이미지 확장자가 .png라면 아래 .jpg를 .png로만 바꿔주세요.
-        const currentFrame = index => {
-            const padIndex = String(index).padStart(6, '0');
-            return `./frame-${padIndex}.jpg`;
+        const currentFrame = index => (
+            `./frame-${index.toString().padStart(6, '0')}.jpg`
+        );
+
+        // 이미지 객체 배열 사전 생성
+        const images = [];
+        const airpods = {
+            frame: 0
         };
 
-        const images = [];
-        const canvasState = { frame: 0 };
-
+        // 이미지 미리 로드
         for (let i = 0; i < frameCount; i++) {
             const img = new Image();
             img.src = currentFrame(i);
             images.push(img);
         }
 
-        images[0].onload = function() {
-            canvas.width = images[0].naturalWidth;
-            canvas.height = images[0].naturalHeight;
-            context.drawImage(images[0], 0, 0);
+        // 캔버스 크기 지정 및 첫 프레임 렌더링
+        const img = new Image();
+        img.src = currentFrame(0);
+        canvas.width = 1920;
+        canvas.height = 1080;
+        
+        img.onload = function() {
+            context.drawImage(img, 0, 0);
         };
 
-        // 애플 스타일 부드러운 스크롤 보간(Lerp) 적용
-        let targetFrame = 0;
-        let currentRenderFrame = 0;
-
-        window.addEventListener('scroll', () => {
-            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-            const maxScrollTop = document.documentElement.scrollHeight - window.innerHeight;
-            const scrollFraction = scrollTop / maxScrollTop;
-            targetFrame = scrollFraction * (frameCount - 1);
-        });
-
-        function render() {
-            // 부드럽게 따라붙는 감도 조절 (숫자가 낮을수록 묵직하고 부드러움)
-            currentRenderFrame += (targetFrame - currentRenderFrame) * 0.1;
-            
-            const frameIndex = Math.min(frameCount - 1, Math.floor(currentRenderFrame));
-            
-            if (images[frameIndex] && images[frameIndex].complete) {
+        // 캔버스 드로잉 함수
+        const updateImage = index => {
+            if (images[index] && images[index].complete) {
                 context.clearRect(0, 0, canvas.width, canvas.height);
-                context.drawImage(images[frameIndex], 0, 0);
+                context.drawImage(images[index], 0, 0);
             }
-            
-            requestAnimationFrame(render);
-        }
+        };
 
-        render();
+        // 스크롤 연동 로직
+        window.addEventListener('scroll', () => {
+            const scrollTop = html.scrollTop || document.body.scrollTop;
+            const maxScrollTop = html.scrollHeight - window.innerHeight;
+            const scrollFraction = scrollTop / maxScrollTop;
+            
+            const frameIndex = Math.min(
+                frameCount - 1,
+                Math.ceil(scrollFraction * frameCount)
+            );
+            
+            requestAnimationFrame(() => updateImage(frameIndex));
+        });
     </script>
 </body>
 </html>
