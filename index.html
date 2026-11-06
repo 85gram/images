@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컬러드스파 스크롤 애니메이션</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #000;
+            overflow-x: hidden;
+        }
+        /* 스크롤 길이를 늘려서 애니메이션 감도 조절 */
+        .scroll-container {
+            height: 8000vh; 
+        }
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scroll-container"></div>
+    <div class="canvas-container">
+        <canvas id="hero-lightpass"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("hero-lightpass");
+        const context = canvas.getContext("2d");
+
+        // 총 프레임 수 (0부터 1517까지 총 1518장 혹은 지정하신 1517장 기준)
+        const frameCount = 1518;
+        
+        // 🚨 [적용 완료] 파이널컷 실제 추출 형식: frame-000000.jpg (6자리 zero-padding)
+        // 만약 이미지 확장자가 .png라면 아래 .jpg를 .png로만 바꿔주세요.
+        const currentFrame = index => {
+            const padIndex = String(index).padStart(6, '0');
+            return `./frame-${padIndex}.jpg`;
+        };
+
+        const images = [];
+        const canvasState = { frame: 0 };
+
+        for (let i = 0; i < frameCount; i++) {
+            const img = new Image();
+            img.src = currentFrame(i);
+            images.push(img);
+        }
+
+        images[0].onload = function() {
+            canvas.width = images[0].naturalWidth;
+            canvas.height = images[0].naturalHeight;
+            context.drawImage(images[0], 0, 0);
+        };
+
+        // 애플 스타일 부드러운 스크롤 보간(Lerp) 적용
+        let targetFrame = 0;
+        let currentRenderFrame = 0;
+
+        window.addEventListener('scroll', () => {
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            const maxScrollTop = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollFraction = scrollTop / maxScrollTop;
+            targetFrame = scrollFraction * (frameCount - 1);
+        });
+
+        function render() {
+            // 부드럽게 따라붙는 감도 조절 (숫자가 낮을수록 묵직하고 부드러움)
+            currentRenderFrame += (targetFrame - currentRenderFrame) * 0.1;
+            
+            const frameIndex = Math.min(frameCount - 1, Math.floor(currentRenderFrame));
+            
+            if (images[frameIndex] && images[frameIndex].complete) {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(images[frameIndex], 0, 0);
+            }
+            
+            requestAnimationFrame(render);
+        }
+
+        render();
+    </script>
+</body>
+</html>
